@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>پنل مدیریت ووشه</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --green: #3d6b4f;
+    --green-light: #5a8f6b;
+    --green-pale: #e8f2ec;
+    --cream: #faf7f2;
+    --dark: #1e2820;
+    --gray: #6b7c6e;
+    --border: #d4e0d8;
+    --red: #c0392b;
+    --gold: #b8860b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Vazirmatn', sans-serif;
+    background: var(--cream);
+    color: var(--dark);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--green);
+    color: white;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+
+  header h1 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  header span {
+    font-size: 0.8rem;
+    opacity: 0.8;
+  }
+
+  .tabs {
+    display: flex;
+    background: white;
+    border-bottom: 2px solid var(--border);
+    padding: 0 24px;
+    gap: 4px;
+  }
+
+  .tab {
+    padding: 14px 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--gray);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    color: var(--green);
+    border-bottom-color: var(--green);
+  }
+
+  .tab:hover:not(.active) {
+    color: var(--green-light);
+  }
+
+  .page { display: none; padding: 24px; max-width: 700px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+
+  .card h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--green);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--green-pale);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .form-row.single { grid-template-columns: 1fr; }
+
+  .field label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--gray);
+    margin-bottom: 6px;
+  }
+
+  .field input, .field select, .field textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Vazirmatn', sans-serif;
+    font-size: 0.9rem;
+    color: var(--dark);
+    background: var(--cream);
+    transition: border-color 0.2s;
+    outline: none;
+  }
+
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--green);
+    background: white;
+  }
+
+  .field textarea { resize: vertical; min-height: 70px; }
+
+  .btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Vazirmatn', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--green);
+    color: white;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .btn-primary:hover { background: var(--green-light); }
+
+  .btn-secondary {
+    background: var(--green-pale);
+    color: var(--green);
+  }
+
+  .btn-secondary:hover { background: var(--border); }
+
+  .btn-danger { background: #fde8e8; color: var(--red); }
+  .btn-danger:hover { background: #fbd0d0; }
+
+  .toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-80px);
+    background: var(--green);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 24px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 9999;
+    transition: transform 0.3s ease;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { background: var(--red); }
+
+  /* Settings */
+  .driver-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--green-pale);
+  }
+
+  .driver-item:last-child { border-bottom: none; }
+
+  .driver-name {
+    flex: 1;
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+
+  .driver-id {
+    font-size: 0.75rem;
+    color: var(--gray);
+    direction: ltr;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-green { background: var(--green-pale); color: var(--green); }
+  .badge-red { background: #fde8e8; color: var(--red); }
+
+  /* Orders list */
+  .order-item {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .order-num {
+    font-weight: 700;
+    color: var(--green);
+    font-size: 0.95rem;
+  }
+
+  .order-meta {
+    font-size: 0.8rem;
+    color: var(--gray);
+    line-height: 1.8;
+  }
+
+  .order-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+  /* Payment */
+  .payment-block {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--green-pale);
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+
+  .payment-block .driver-label {
+    flex: 1;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .payment-block input {
+    width: 140px;
+    padding: 8px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-family: 'Vazirmatn', sans-serif;
+    font-size: 0.9rem;
+    text-align: left;
+    direction: ltr;
+  }
+
+  /* Report */
+  .report-filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .report-filters .field { flex: 1; min-width: 140px; }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .stat-box {
+    background: var(--green-pale);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .stat-box .val {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  .stat-box .lbl {
+    font-size: 0.75rem;
+    color: var(--gray);
+    margin-top: 4px;
+  }
+
+  .token-section {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+
+  .token-section p {
+    font-size: 0.8rem;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌸 پنل مدیریت ووشه</h1>
+  <span id="orderCount">۰ سفارش ثبت شده</span>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('orders')">ثبت سفارش</div>
+  <div class="tab" onclick="showTab('list')">لیست سفارشات</div>
+  <div class="tab" onclick="showTab('payments')">پرداخت رانندگان</div>
+  <div class="tab" onclick="showTab('report')">گزارش ماهانه</div>
+  <div class="tab" onclick="showTab('settings')">تنظیمات</div>
+</div>
+
+<!-- TAB: ثبت سفارش -->
+<div class="page active" id="tab-orders">
+  <div class="card">
+    <h2>➕ ثبت سفارش جدید</h2>
+    <div class="form-row">
+      <div class="field">
+        <label>شماره سفارش *</label>
+        <input type="text" id="orderId" placeholder="مثلاً: ۱۰۰۱">
+      </div>
+      <div class="field">
+        <label>نوع سفارش</label>
+        <select id="orderType">
+          <option>گل</option>
+          <option>کیک</option>
+          <option>گل و کیک</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row single">
+      <div class="field">
+        <label>نام محصول *</label>
+        <input type="text" id="product" placeholder="مثلاً: فلت باکس بزرگ فول ارکیده سفید">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>نام فرستنده (خریدار)</label>
+        <input type="text" id="sender" placeholder="نام خریدار">
+      </div>
+      <div class="field">
+        <label>نام گیرنده *</label>
+        <input type="text" id="receiver" placeholder="نام تحویل‌گیرنده">
+      </div>
+    </div>
+    <div class="form-row single">
+      <div class="field">
+        <label>آدرس تحویل *</label>
+        <input type="text" id="address" placeholder="آدرس کامل">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>تاریخ تحویل *</label>
+        <input type="text" id="deliveryDate" placeholder="مثلاً: ۱۴۰۵/۰۳/۰۸">
+      </div>
+      <div class="field">
+        <label>بازه زمانی</label>
+        <select id="timeSlot">
+          <option>۸ تا ۱۲</option>
+          <option>۱۲ تا ۱۶</option>
+          <option>۱۶ تا ۲۱</option>
+          <option>۱۷ تا ۲۱</option>
+          <option>توافقی</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>راننده</label>
+        <select id="driver"></select>
+      </div>
+      <div class="field">
+        <label>مبلغ نهایی (تومان) 🔒</label>
+        <input type="number" id="price" placeholder="فقط برای شما">
+      </div>
+    </div>
+    <div class="form-row single">
+      <div class="field">
+        <label>توضیحات</label>
+        <textarea id="notes" placeholder="توضیحات اضافه..."></textarea>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="submitOrder()">📤 ثبت و ارسال به راننده</button>
+  </div>
+</div>
+
+<!-- TAB: لیست سفارشات -->
+<div class="page" id="tab-list">
+  <div class="card">
+    <h2>📋 سفارشات ثبت شده</h2>
+    <div id="ordersList"><p style="color:var(--gray);text-align:center;padding:20px">سفارشی ثبت نشده</p></div>
+  </div>
+</div>
+
+<!-- TAB: پرداخت رانندگان -->
+<div class="page" id="tab-payments">
+  <div class="card">
+    <h2>💰 ثبت پرداخت رانندگان</h2>
+    <div class="form-row">
+      <div class="field">
+        <label>از تاریخ</label>
+        <input type="text" id="payFrom" placeholder="۱۴۰۵/۰۳/۰۱">
+      </div>
+      <div class="field">
+        <label>تا تاریخ</label>
+        <input type="text" id="payTo" placeholder="۱۴۰۵/۰۳/۱۰">
+      </div>
+    </div>
+    <div id="paymentDrivers"></div>
+    <button class="btn btn-primary" onclick="savePayments()">💾 ذخیره پرداخت‌ها</button>
+  </div>
+
+  <div class="card">
+    <h2>📌 سابقه پرداخت‌ها</h2>
+    <div id="paymentHistory"><p style="color:var(--gray);font-size:0.85rem">پرداختی ثبت نشده</p></div>
+  </div>
+</div>
+
+<!-- TAB: گزارش -->
+<div class="page" id="tab-report">
+  <div class="card">
+    <h2>📊 گزارش ماهانه</h2>
+    <div class="report-filters">
+      <div class="field">
+        <label>از تاریخ</label>
+        <input type="text" id="repFrom" placeholder="۱۴۰۵/۰۳/۰۱">
+      </div>
+      <div class="field">
+        <label>تا تاریخ</label>
+        <input type="text" id="repTo" placeholder="۱۴۰۵/۰۳/۳۱">
+      </div>
+      <button class="btn btn-secondary" onclick="generateReport()">نمایش</button>
+    </div>
+    <div id="reportStats"></div>
+    <button class="btn btn-primary" onclick="exportExcel()" style="margin-top:8px">⬇️ دانلود اکسل</button>
+  </div>
+</div>
+
+<!-- TAB: تنظیمات -->
+<div class="page" id="tab-settings">
+  <div class="card">
+    <h2>⚙️ تنظیمات ربات تلگرام</h2>
+    <div class="token-section">
+      <p>⚠️ این اطلاعات فقط روی همین دستگاه ذخیره می‌شه و هیچ‌جا ارسال نمی‌شه</p>
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Token ربات تلگرام</label>
+      <input type="text" id="botToken" placeholder="123456:ABC..." style="direction:ltr">
+    </div>
+    <button class="btn btn-secondary" style="margin-bottom:20px" onclick="saveToken()">💾 ذخیره Token</button>
+  </div>
+
+  <div class="card">
+    <h2>🚗 مدیریت رانندگان</h2>
+    <div class="form-row">
+      <div class="field">
+        <label>نام راننده</label>
+        <input type="text" id="driverName" placeholder="نام کامل">
+      </div>
+      <div class="field">
+        <label>Chat ID تلگرام</label>
+        <input type="text" id="driverChatId" placeholder="مثلاً: 68519874" style="direction:ltr">
+      </div>
+    </div>
+    <button class="btn btn-secondary" onclick="addDriver()" style="margin-bottom:20px">➕ افزودن راننده</button>
+    <div id="driversList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- State ----
+let state = {
+  token: localStorage.getItem('woshe_token') || '',
+  drivers: JSON.parse(localStorage.getItem('woshe_drivers') || '[]'),
+  orders: JSON.parse(localStorage.getItem('woshe_orders') || '[]'),
+  payments: JSON.parse(localStorage.getItem('woshe_payments') || '[]'),
+};
+
+// Pre-load the two drivers
+if (state.drivers.length === 0) {
+  state.drivers = [
+    { id: 1, name: 'سینا قباد', chatId: '68519874' },
+    { id: 2, name: 'محمد', chatId: '6991578474' },
+  ];
+  save('drivers');
+}
+
+function save(key) {
+  localStorage.setItem('woshe_' + key, JSON.stringify(state[key]));
+}
+
+// ---- Tabs ----
+function showTab(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+
+  if (name === 'list') renderOrders();
+  if (name === 'payments') renderPaymentDrivers();
+  if (name === 'settings') renderDriversList();
+  if (name === 'report') renderReportStats();
+  updateCount();
+}
+
+// ---- Toast ----
+function toast(msg, err) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (err ? ' error' : '');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ---- Driver select ----
+function populateDriverSelect() {
+  const sel = document.getElementById('driver');
+  sel.innerHTML = state.drivers.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+}
+
+// ---- Submit Order ----
+async function submitOrder() {
+  const orderId = document.getElementById('orderId').value.trim();
+  const product = document.getElementById('product').value.trim();
+  const receiver = document.getElementById('receiver').value.trim();
+  const address = document.getElementById('address').value.trim();
+  const deliveryDate = document.getElementById('deliveryDate').value.trim();
+
+  if (!orderId || !product || !receiver || !address || !deliveryDate) {
+    toast('لطفاً فیلدهای ستاره‌دار را پر کنید', true); return;
+  }
+
+  if (!state.token) {
+    toast('ابتدا Token ربات را در تنظیمات وارد کنید', true); return;
+  }
+
+  const driverId = parseInt(document.getElementById('driver').value);
+  const driver = state.drivers.find(d => d.id === driverId);
+  if (!driver) { toast('راننده‌ای انتخاب نشده', true); return; }
+
+  const order = {
+    id: Date.now(),
+    orderId,
+    orderType: document.getElementById('orderType').value,
+    product,
+    sender: document.getElementById('sender').value.trim(),
+    receiver,
+    address,
+    deliveryDate,
+    timeSlot: document.getElementById('timeSlot').value,
+    driverId,
+    driverName: driver.name,
+    price: document.getElementById('price').value,
+    notes: document.getElementById('notes').value.trim(),
+    createdAt: new Date().toLocaleDateString('fa-IR'),
+  };
+
+  const msg = `🌸 *سفارش جدید ووشه*\n\n` +
+    `📦 *شماره سفارش:* ${order.orderId}\n` +
+    `🌺 *محصول:* ${order.product}\n` +
+    `📦 *نوع:* ${order.orderType}\n` +
+    `👤 *فرستنده:* ${order.sender || '—'}\n` +
+    `🎁 *گیرنده:* ${order.receiver}\n` +
+    `📍 *آدرس:* ${order.address}\n` +
+    `📅 *تاریخ تحویل:* ${order.deliveryDate}\n` +
+    `🕐 *بازه زمانی:* ${order.timeSlot}\n` +
+    (order.notes ? `📝 *توضیحات:* ${order.notes}` : '');
+
+  try {
+    const resp = await fetch(`https://api.telegram.org/bot${state.token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: driver.chatId, text: msg, parse_mode: 'Markdown' })
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.description);
+
+    state.orders.push(order);
+    save('orders');
+    clearOrderForm();
+    updateCount();
+    toast(`✅ سفارش برای ${driver.name} ارسال شد`);
+  } catch (e) {
+    toast('خطا در ارسال: ' + e.message, true);
+  }
+}
+
+function clearOrderForm() {
+  ['orderId','product','sender','receiver','address','deliveryDate','notes','price'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
+
+// ---- Render Orders ----
+function renderOrders() {
+  const el = document.getElementById('ordersList');
+  if (!state.orders.length) {
+    el.innerHTML = '<p style="color:var(--gray);text-align:center;padding:20px">سفارشی ثبت نشده</p>';
+    return;
+  }
+  el.innerHTML = [...state.orders].reverse().map(o => `
+    <div class="order-item">
+      <div class="order-header">
+        <div>
+          <div class="order-num">سفارش #${o.orderId}</div>
+          <div style="font-size:0.8rem;color:var(--gray)">${o.createdAt}</div>
+        </div>
+        <span class="badge badge-green">${o.driverName}</span>
+      </div>
+      <div class="order-meta">
+        🌺 ${o.product} &nbsp;|&nbsp; 📦 ${o.orderType}<br>
+        👤 فرستنده: ${o.sender || '—'} &nbsp;→&nbsp; 🎁 ${o.receiver}<br>
+        📍 ${o.address}<br>
+        📅 ${o.deliveryDate} — ${o.timeSlot}
+        ${o.notes ? `<br>📝 ${o.notes}` : ''}
+      </div>
+      <div class="order-actions">
+        <button class="btn btn-danger" style="font-size:0.8rem;padding:6px 14px" onclick="deleteOrder(${o.id})">🗑 حذف</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function deleteOrder(id) {
+  if (!confirm('حذف شود؟')) return;
+  state.orders = state.orders.filter(o => o.id !== id);
+  save('orders');
+  renderOrders();
+  updateCount();
+}
+
+// ---- Payments ----
+function renderPaymentDrivers() {
+  const el = document.getElementById('paymentDrivers');
+  el.innerHTML = state.drivers.map(d => `
+    <div class="payment-block">
+      <div class="driver-label">🚗 ${d.name}</div>
+      <input type="number" id="pay_${d.id}" placeholder="مبلغ (تومان)">
+    </div>
+  `).join('');
+  renderPaymentHistory();
+}
+
+function savePayments() {
+  const from = document.getElementById('payFrom').value.trim();
+  const to = document.getElementById('payTo').value.trim();
+  if (!from || !to) { toast('بازه تاریخ را وارد کنید', true); return; }
+
+  let any = false;
+  state.drivers.forEach(d => {
+    const val = document.getElementById('pay_' + d.id)?.value;
+    if (val) {
+      state.payments.push({ driverId: d.id, driverName: d.name, amount: parseInt(val), from, to, savedAt: new Date().toLocaleDateString('fa-IR') });
+      any = true;
+    }
+  });
+
+  if (!any) { toast('مبلغی وارد نشده', true); return; }
+  save('payments');
+  renderPaymentHistory();
+  toast('✅ پرداخت‌ها ذخیره شد');
+}
+
+function renderPaymentHistory() {
+  const el = document.getElementById('paymentHistory');
+  if (!state.payments.length) { el.innerHTML = '<p style="color:var(--gray);font-size:0.85rem">پرداختی ثبت نشده</p>'; return; }
+  el.innerHTML = [...state.payments].reverse().map(p => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--green-pale);font-size:0.85rem">
+      <div>
+        <strong>${p.driverName}</strong><br>
+        <span style="color:var(--gray)">${p.from} تا ${p.to}</span>
+      </div>
+      <strong style="color:var(--green)">${Number(p.amount).toLocaleString('fa')} تومان</strong>
+    </div>
+  `).join('');
+}
+
+// ---- Report ----
+function generateReport() {
+  renderReportStats();
+}
+
+function renderReportStats() {
+  const from = document.getElementById('repFrom')?.value || '';
+  const to = document.getElementById('repTo')?.value || '';
+  const orders = from && to ? state.orders.filter(o => o.deliveryDate >= from && o.deliveryDate <= to) : state.orders;
+  const totalSales = orders.reduce((s, o) => s + (parseInt(o.price) || 0), 0);
+  const totalPay = state.payments.filter(p => !from || (p.from >= from && p.to <= to)).reduce((s, p) => s + p.amount, 0);
+
+  const el = document.getElementById('reportStats');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="stat-row">
+      <div class="stat-box">
+        <div class="val">${orders.length.toLocaleString('fa')}</div>
+        <div class="lbl">تعداد سفارشات</div>
+      </div>
+      <div class="stat-box">
+        <div class="val">${totalSales.toLocaleString('fa')}</div>
+        <div class="lbl">جمع فروش (تومان)</div>
+      </div>
+      <div class="stat-box">
+        <div class="val">${totalPay.toLocaleString('fa')}</div>
+        <div class="lbl">پرداخت رانندگان (تومان)</div>
+      </div>
+      <div class="stat-box" style="background:#e8f5e9">
+        <div class="val" style="color:#2e7d32">${(totalSales - totalPay).toLocaleString('fa')}</div>
+        <div class="lbl">سود خالص (تومان)</div>
+      </div>
+    </div>
+  `;
+}
+
+// ---- Export Excel ----
+function exportExcel() {
+  const from = document.getElementById('repFrom').value || '';
+  const to = document.getElementById('repTo').value || '';
+  const orders = from && to ? state.orders.filter(o => o.deliveryDate >= from && o.deliveryDate <= to) : state.orders;
+
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Orders
+  const orderRows = [['شماره سفارش','نوع','محصول','فرستنده','گیرنده','آدرس','تاریخ تحویل','بازه زمانی','راننده','مبلغ نهایی','توضیحات','تاریخ ثبت']];
+  orders.forEach(o => orderRows.push([o.orderId,o.orderType,o.product,o.sender,o.receiver,o.address,o.deliveryDate,o.timeSlot,o.driverName,o.price||0,o.notes,o.createdAt]));
+  const ws1 = XLSX.utils.aoa_to_sheet(orderRows);
+  ws1['!cols'] = [10,8,20,12,12,30,12,10,12,14,20,12].map(w => ({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws1, 'سفارشات');
+
+  // Sheet 2: Payments
+  const payRows = [['راننده','از تاریخ','تا تاریخ','مبلغ (تومان)','تاریخ ثبت']];
+  state.payments.forEach(p => payRows.push([p.driverName,p.from,p.to,p.amount,p.savedAt]));
+  const ws2 = XLSX.utils.aoa_to_sheet(payRows);
+  XLSX.utils.book_append_sheet(wb, ws2, 'پرداخت رانندگان');
+
+  // Sheet 3: Summary per driver
+  const driverSummary = [['راننده','تعداد سفارشات','جمع فروش','جمع پرداختی']];
+  state.drivers.forEach(d => {
+    const dOrders = orders.filter(o => o.driverId === d.id);
+    const sales = dOrders.reduce((s, o) => s + (parseInt(o.price)||0), 0);
+    const pays = state.payments.filter(p => p.driverId === d.id).reduce((s, p) => s + p.amount, 0);
+    driverSummary.push([d.name, dOrders.length, sales, pays]);
+  });
+  const ws3 = XLSX.utils.aoa_to_sheet(driverSummary);
+  XLSX.utils.book_append_sheet(wb, ws3, 'خلاصه رانندگان');
+
+  const period = from && to ? `${from}_${to}` : 'کل';
+  XLSX.writeFile(wb, `گزارش_ووشه_${period}.xlsx`);
+  toast('✅ فایل اکسل دانلود شد');
+}
+
+// ---- Settings ----
+function saveToken() {
+  state.token = document.getElementById('botToken').value.trim();
+  localStorage.setItem('woshe_token', state.token);
+  toast('✅ Token ذخیره شد');
+}
+
+function addDriver() {
+  const name = document.getElementById('driverName').value.trim();
+  const chatId = document.getElementById('driverChatId').value.trim();
+  if (!name || !chatId) { toast('نام و Chat ID را وارد کنید', true); return; }
+  state.drivers.push({ id: Date.now(), name, chatId });
+  save('drivers');
+  document.getElementById('driverName').value = '';
+  document.getElementById('driverChatId').value = '';
+  renderDriversList();
+  populateDriverSelect();
+  toast('✅ راننده اضافه شد');
+}
+
+function removeDriver(id) {
+  if (!confirm('حذف شود؟')) return;
+  state.drivers = state.drivers.filter(d => d.id !== id);
+  save('drivers');
+  renderDriversList();
+  populateDriverSelect();
+}
+
+function renderDriversList() {
+  const el = document.getElementById('driversList');
+  if (!state.drivers.length) { el.innerHTML = '<p style="color:var(--gray)">راننده‌ای ثبت نشده</p>'; return; }
+  el.innerHTML = state.drivers.map(d => `
+    <div class="driver-item">
+      <div>
+        <div class="driver-name">🚗 ${d.name}</div>
+        <div class="driver-id">${d.chatId}</div>
+      </div>
+      <button class="btn btn-danger" style="font-size:0.8rem;padding:5px 12px" onclick="removeDriver(${d.id})">حذف</button>
+    </div>
+  `).join('');
+
+  // Load token
+  document.getElementById('botToken').value = state.token;
+}
+
+function updateCount() {
+  document.getElementById('orderCount').textContent = `${state.orders.length.toLocaleString('fa')} سفارش ثبت شده`;
+}
+
+// ---- Init ----
+populateDriverSelect();
+updateCount();
+</script>
+</body>
+</html>
